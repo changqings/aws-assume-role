@@ -1,7 +1,8 @@
 use chrono::Utc;
-use clap::{arg, Parser};
+use clap::{Parser, arg};
 use error::AppError;
 use ini::Ini;
+use serde_json::json;
 
 mod error;
 mod sts;
@@ -14,20 +15,28 @@ struct Args {
     profile: Option<String>,
 
     /// Role arn to assume
-    #[arg(short, long)]
+    #[arg(short = 'a', long)]
     role_arn: String,
 
     /// Unique role session name. Will automatically add a random string as the suffix
     #[arg(short, long)]
     session_name: String,
 
+    /// Unique role session name. Will automatically add a random string as the suffix
+    #[arg(short = 'f', default_value = ".aws/credentials")]
+    credentials_file: String,
+
     /// Duration of the assumed role in seconds, minimum value is 900
     #[arg(short, long, default_value_t = 3600)]
     duration: i32,
 
     /// Auto refresh the sts token
-    #[arg(short, long, default_value_t = false)]
+    #[arg(short = 'r', long, default_value_t = false)]
     refresh: bool,
+
+    /// as credential_process
+    #[arg(short = 'c', default_value_t = false)]
+    process: bool,
 }
 
 async fn assume_role(args: Args) -> Result<(), AppError> {
@@ -35,14 +44,28 @@ async fn assume_role(args: Args) -> Result<(), AppError> {
     let session_name = format!("{}@{}", args.session_name, current_time);
 
     let home_folder = dirs::home_dir().expect("Failed to get home folder");
-
     let credentials = sts::assume_role(&args.role_arn, args.duration, &session_name).await?;
+
+    if args.process {
+        let value = json!({
+              "Version": 1,
+              "AccessKeyId": &credentials.access_key_id,
+              "SecretAccessKey": &credentials.secret_access_key,
+              "SessionToken": &credentials.session_token,
+              "Expiration": &credentials.expiration
+        });
+        println!("{}", value);
+        return Ok(());
+    }
 
     match args.profile {
         Some(profile) => {
-            let credentials_file = home_folder.join(".aws/credentials");
+            let credentials_file = home_folder.join(&args.credentials_file);
+            if !credentials_file.exists() {
+                std::fs::create_dir_all(credentials_file.parent().unwrap())?;
+                std::fs::File::create(&credentials_file)?;
+            }
             let mut credentials_config = Ini::load_from_file(&credentials_file)?;
-
             let mut profile_credentials = credentials_config.with_section(Some(&profile));
 
             profile_credentials
@@ -51,9 +74,7 @@ async fn assume_role(args: Args) -> Result<(), AppError> {
                 .set("aws_session_token", &credentials.session_token);
 
             credentials_config.write_to_file(&credentials_file)?;
-            println!("AWS CLI profile [{}] credentials updated but not used in ENV", &profile);
-            println!("Use --profile {} in aws cli to use this profile, for example:", &profile);
-            println!("aws --profile {} s3 ls", &profile);
+            println!("aws profile [{}] credentials updated", &profile);
         }
 
         None => {
@@ -71,7 +92,7 @@ async fn main() -> Result<(), AppError> {
     let args = Args::parse();
 
     if args.refresh {
-        let seconds_before_refresh = 60;
+        let seconds_before_refresh = 300;
         let refresh_interval = args.duration - seconds_before_refresh;
         println!("Auto refresh is enabled, refresh interval {} seconds", refresh_interval);
 

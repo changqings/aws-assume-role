@@ -1,22 +1,23 @@
 [package]
 name = "aws-assume-role"
-description = "Assume aws sts role, save credentials to profile or print to stdout using shell export syntax"
-version = "1.0.0"
-edition = "2021"
+description = "Assume aws sts role"
+version = "1.0.1"
+edition = "2024"
 
 [dependencies]
-aws-config = {version="1.5.1", features = ["behavior-version-latest"]}
-aws-sdk-sts = "1.29.0"
+aws-config = { version = "1.8.1", features = ["behavior-version-latest"] }
+aws-sdk-sts = "1.76.0"
 aws-smithy-runtime-api = "1.6.2"
 aws-smithy-http = "0.60.8"
-chrono = "0.4.38"
-clap = {version = "4.5.4", features=["derive"]}
-dirs = "5.0.1"
+chrono = "0.4.41"
+clap = { version = "4.5.4", features = ["derive"] }
+dirs = "6.0.0"
 rust-ini = "0.21.0"
-thiserror = "1.0.61"
+thiserror = "2.0.12"
 tokio = { version = "^1.38.0", features = ["rt-multi-thread", "macros"] }
+serde_json = "1.0.140"
 
 [profile.release]
-strip = true  # Automatically strip symbols from the binary.
-opt-level = "z"  # Optimize for size.
-lto = true # remove dead code and often times reduces binary size
+#strip = true  # Automatically strip symbols from the binary.
+#opt-level = "z"  # Optimize for size.
+#lto = true # remove dead code and often times reduces binary size
