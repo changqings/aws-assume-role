@@ -23,7 +23,7 @@ struct Args {
     session_name: String,
 
     /// Unique role session name. Will automatically add a random string as the suffix
-    #[arg(short = 'f', default_value = ".aws/credentials")]
+    #[arg(short = 'f', long, default_value = ".aws/credentials")]
     credentials_file: String,
 
     /// Duration of the assumed role in seconds, minimum value is 900
@@ -35,7 +35,7 @@ struct Args {
     refresh: bool,
 
     /// as credential_process
-    #[arg(short = 'c', default_value_t = false)]
+    #[arg(short = 'c', long, default_value_t = false)]
     process: bool,
 }
 
@@ -52,7 +52,7 @@ async fn assume_role(args: Args) -> Result<(), AppError> {
               "AccessKeyId": &credentials.access_key_id,
               "SecretAccessKey": &credentials.secret_access_key,
               "SessionToken": &credentials.session_token,
-              "Expiration": &credentials.expiration
+              "Expiration": &credentials.expiration.to_string(),
         });
         println!("{}", value);
         return Ok(());
